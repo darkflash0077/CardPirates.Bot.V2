@@ -1,0 +1,30 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+    env:
+      REPO: ${{ secrets.HUB_REPO }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: get-net-sdk-project-versions-action
+      uses: kzrnm/get-net-sdk-project-versions-action@v1.3.0
+      id: get-version
+      with:
+        proj-path: CardPirates.Bot.V2/CardPirates.Bot.V2.csproj
+    - name: version-print
+      run: echo "${{steps.get-version.outputs.version-prefix}}"     
+    - name: login
+      run: docker login darkflash.cr.cloud.ru --username ${{ secrets.DOCKER_LOGIN_SBER }} --password ${{ secrets.DOCKER_PASS_SBER }}
+    - name: Build the Docker image
+      run: docker build . -f CardPirates.Bot.V2/Dockerfile -t $REPO:latest -t $REPO:${GITHUB_SHA::8} -t $REPO:${{steps.get-version.outputs.version-prefix}}
+    - name: docker push
+      run: docker push --all-tags $REPO
